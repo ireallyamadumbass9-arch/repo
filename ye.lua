@@ -4,8 +4,16 @@ local RunService = game:GetService("RunService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local character
+local humanoid
+
+local function setupCharacter(char)
+	character = char
+	humanoid = character:WaitForChild("Humanoid")
+end
+
+setupCharacter(player.Character or player.CharacterAdded:Wait())
+player.CharacterAdded:Connect(setupCharacter)
 
 -- settings
 local TSUNAMI_CLEAR_INTERVAL = 0.5
@@ -18,36 +26,36 @@ local forceZeroPrompts = false
 -- tsunami deleter loop (no mercy)
 ----------------------------------------------------------------
 task.spawn(function()
-    while true do
-        local folder = workspace:FindFirstChild("ActiveTsunamis")
-        if folder then
-            for _, v in ipairs(folder:GetChildren()) do
-                pcall(function()
-                    v:Destroy()
-                end)
-            end
-        end
-        task.wait(TSUNAMI_CLEAR_INTERVAL)
-    end
+	while true do
+		local folder = workspace:FindFirstChild("ActiveTsunamis")
+		if folder then
+			for _, v in ipairs(folder:GetChildren()) do
+				pcall(function()
+					v:Destroy()
+				end)
+			end
+		end
+		task.wait(TSUNAMI_CLEAR_INTERVAL)
+	end
 end)
 
 ----------------------------------------------------------------
 -- prompt zeroing loop (because waiting is cringe)
 ----------------------------------------------------------------
 task.spawn(function()
-    while true do
-        if forceZeroPrompts then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") then
-                    pcall(function()
-                        obj.HoldDuration = 0
-                        obj.RequiresLineOfSight = false
-                    end)
-                end
-            end
-        end
-        task.wait(PROMPT_FORCE_INTERVAL)
-    end
+	while true do
+		if forceZeroPrompts then
+			for _, obj in ipairs(workspace:GetDescendants()) do
+				if obj:IsA("ProximityPrompt") then
+					pcall(function()
+						obj.HoldDuration = 0
+						obj.RequiresLineOfSight = false
+					end)
+				end
+			end
+		end
+		task.wait(PROMPT_FORCE_INTERVAL)
+	end
 end)
 
 ----------------------------------------------------------------
@@ -78,7 +86,7 @@ title.Text = "clean hub"
 title.TextColor3 = Color3.fromRGB(230, 230, 230)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
-title.TextXAlignment = Left
+title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = main
 
 ----------------------------------------------------------------
@@ -110,28 +118,28 @@ local MIN_SPEED = 8
 local MAX_SPEED = 120
 
 sliderBack.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+	end
 end)
 
 sliderBack.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
 end)
 
 RunService.RenderStepped:Connect(function()
-    if dragging then
-        local mouse = Players.LocalPlayer:GetMouse()
-        local x = math.clamp(
-            (mouse.X - sliderBack.AbsolutePosition.X) / sliderBack.AbsoluteSize.X,
-            0,
-            1
-        )
-        sliderFill.Size = UDim2.new(x, 0, 1, 0)
-        humanoid.WalkSpeed = math.floor(MIN_SPEED + (MAX_SPEED - MIN_SPEED) * x)
-    end
+	if dragging and humanoid then
+		local mouse = player:GetMouse()
+		local x = math.clamp(
+			(mouse.X - sliderBack.AbsolutePosition.X) / sliderBack.AbsoluteSize.X,
+			0,
+			1
+		)
+		sliderFill.Size = UDim2.new(x, 0, 1, 0)
+		humanoid.WalkSpeed = math.floor(MIN_SPEED + (MAX_SPEED - MIN_SPEED) * x)
+	end
 end)
 
 ----------------------------------------------------------------
@@ -152,10 +160,8 @@ buttonCorner.CornerRadius = UDim.new(1, 0)
 buttonCorner.Parent = promptButton
 
 promptButton.MouseButton1Click:Connect(function()
-    forceZeroPrompts = not forceZeroPrompts
-    if forceZeroPrompts then
-        promptButton.BackgroundColor3 = Color3.fromRGB(120, 180, 255)
-    else
-        promptButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    end
+	forceZeroPrompts = not forceZeroPrompts
+	promptButton.BackgroundColor3 = forceZeroPrompts
+		and Color3.fromRGB(120, 180, 255)
+		or Color3.fromRGB(60, 60, 60)
 end)
